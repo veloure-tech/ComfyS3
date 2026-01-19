@@ -37,9 +37,10 @@ class SaveImageS3:
 
     def save_images(self, images, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
         filename_prefix += self.prefix_append
-        full_output_folder, filename, counter, subfolder, filename_prefix = S3_INSTANCE.get_save_path(filename_prefix, images[0].shape[1], images[0].shape[0])
+        full_output_folder, filename, _, subfolder, filename_prefix = S3_INSTANCE.get_save_path(filename_prefix, images[0].shape[1], images[0].shape[0])
         results = list()
         s3_image_paths = list()
+        file = f"{filename}.png" if not os.path.splitext(filename)[1] else filename
         
         for image in images:
             i = 255. * image.cpu().numpy()
@@ -53,7 +54,6 @@ class SaveImageS3:
                     for x in extra_pnginfo:
                         metadata.add_text(x, json.dumps(extra_pnginfo[x]))
             
-            file = f"{filename}_{counter:05}_.png"
             temp_file = None
             try:
                 # Create a temporary file
@@ -76,7 +76,6 @@ class SaveImageS3:
                         "subfolder": subfolder,
                         "type": self.type
                     })
-                    counter += 1
 
             finally:
                 # Delete the temporary file
