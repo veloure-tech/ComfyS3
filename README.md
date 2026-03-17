@@ -22,9 +22,17 @@ S3_INPUT_DIR = "..."
 S3_OUTPUT_DIR = "..."
 ```
 
+`S3_INPUT_DIR` and `S3_OUTPUT_DIR` are only needed by the directory-based nodes. `LoadImageS3` and `SaveImageS3` use the exact S3 key provided by their existing `image` and `filename_prefix` inputs.
+
 ### Optional S3 Config Variables
 - ```S3_ENDPOINT_URL``` allows the useage of a AWS Private Link or Other S3 Compatible Storage Solutions
 - ```S3_ADDRESSING_STYLE``` allows the useage of different S3 addressing styles: auto/virtual/path, default is auto, useful for S3-Compatible Storage Solutions
+
+### Image Node Behavior
+- `LoadImageS3.image` is treated as the exact S3 object key to download.
+- `SaveImageS3.filename_prefix` is treated as the exact S3 object key to upload.
+- Image saves are always encoded as PNG, include PNG metadata, and are uploaded with `ContentType: image/png`.
+- No folder or file-extension management is applied by the image nodes.
 
 ## Available Features
 ComfyUI nodes to:

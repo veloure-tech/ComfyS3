@@ -18,9 +18,9 @@ class S3:
         self.s3_client = self.get_client()
         self.input_dir = os.getenv("S3_INPUT_DIR")
         self.output_dir = os.getenv("S3_OUTPUT_DIR")
-        if not self.does_folder_exist(self.input_dir):
+        if self.input_dir and not self.does_folder_exist(self.input_dir):
             self.create_folder(self.input_dir)
-        if not self.does_folder_exist(self.output_dir):
+        if self.output_dir and not self.does_folder_exist(self.output_dir):
             self.create_folder(self.output_dir)
 
     def get_client(self):
@@ -84,7 +84,7 @@ class S3:
     
     def download_file(self, s3_path, local_path):
         local_dir = os.path.dirname(local_path)
-        if not os.path.exists(local_dir):
+        if local_dir and not os.path.exists(local_dir):
             os.makedirs(local_dir)
         try:
             bucket = self.s3_client.Bucket(self.bucket_name)
@@ -97,10 +97,13 @@ class S3:
             err = f"Failed to download file from S3: {e}"
             logger.error(err)
 
-    def upload_file(self, local_path, s3_path):
+    def upload_file(self, local_path, s3_path, extra_args=None):
         try:
             bucket = self.s3_client.Bucket(self.bucket_name)
-            bucket.upload_file(local_path, s3_path)
+            if extra_args is not None:
+                bucket.upload_file(local_path, s3_path, ExtraArgs=extra_args)
+            else:
+                bucket.upload_file(local_path, s3_path)
             return s3_path
         except NoCredentialsError:
             err = "Credentials not available or not valid."

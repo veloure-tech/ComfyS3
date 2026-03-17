@@ -35,12 +35,14 @@ class SaveImageS3:
     OUTPUT_IS_LIST = (True,)
     CATEGORY = "ComfyS3"
 
-    def save_images(self, images, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
-        filename_prefix += self.prefix_append
-        full_output_folder, filename, _, subfolder, filename_prefix = S3_INSTANCE.get_save_path(filename_prefix, images[0].shape[1], images[0].shape[0])
+    def save_images(self, images, filename_prefix, prompt=None, extra_pnginfo=None):
+        if not filename_prefix:
+            raise ValueError("SaveImageS3 requires an exact S3 key.")
+
         results = list()
         s3_image_paths = list()
-        file = f"{filename}.png" if not os.path.splitext(filename)[1] else filename
+        filename = os.path.basename(filename_prefix)
+        subfolder = os.path.dirname(filename_prefix)
         
         for image in images:
             i = 255. * image.cpu().numpy()
@@ -54,7 +56,7 @@ class SaveImageS3:
                     for x in extra_pnginfo:
                         metadata.add_text(x, json.dumps(extra_pnginfo[x]))
             
-            temp_file = None
+            temp_file_path = None
             try:
                 # Create a temporary file
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
@@ -64,15 +66,18 @@ class SaveImageS3:
                     img.save(temp_file_path, pnginfo=metadata, compress_level=self.compress_level)
 
                     # Upload the temporary file to S3
-                    s3_path = os.path.join(full_output_folder, file)
-                    file_path = S3_INSTANCE.upload_file(temp_file_path, s3_path)
+                    file_path = S3_INSTANCE.upload_file(
+                        temp_file_path,
+                        filename_prefix,
+                        extra_args={"ContentType": "image/png"},
+                    )
 
                     # Add the s3 path to the s3_image_paths list
                     s3_image_paths.append(file_path)
                     
                     # Add the result to the results list
                     results.append({
-                        "filename": file,
+                        "filename": filename,
                         "subfolder": subfolder,
                         "type": self.type
                     })
