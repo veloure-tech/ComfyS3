@@ -109,15 +109,6 @@ def install_stub_modules(saved_calls=None, opened_paths=None):
     pil_image_module = types.ModuleType("PIL.Image")
     pil_image_ops_module = types.ModuleType("PIL.ImageOps")
     pil_image_sequence_module = types.ModuleType("PIL.ImageSequence")
-    pil_png_image_plugin_module = types.ModuleType("PIL.PngImagePlugin")
-
-    class FakePngInfo:
-        def __init__(self):
-            self.text = []
-
-        def add_text(self, key, value):
-            self.text.append((key, value))
-
     class FakeSavedImage:
         def save(self, path, pnginfo=None, compress_level=None):
             saved_calls.append(
@@ -134,12 +125,9 @@ def install_stub_modules(saved_calls=None, opened_paths=None):
     pil_image_module.fromarray = lambda _value: FakeSavedImage()
     pil_image_ops_module.exif_transpose = lambda image: image
     pil_image_sequence_module.Iterator = lambda _image: [FakeFrame()]
-    pil_png_image_plugin_module.PngInfo = FakePngInfo
 
     comfy_module = types.ModuleType("comfy")
     comfy_module.__path__ = []
-    comfy_cli_args_module = types.ModuleType("comfy.cli_args")
-    comfy_cli_args_module.args = types.SimpleNamespace(disable_metadata=False)
 
     sys.modules["boto3"] = boto3_module
     sys.modules["botocore"] = botocore_module
@@ -152,9 +140,7 @@ def install_stub_modules(saved_calls=None, opened_paths=None):
     sys.modules["PIL.Image"] = pil_image_module
     sys.modules["PIL.ImageOps"] = pil_image_ops_module
     sys.modules["PIL.ImageSequence"] = pil_image_sequence_module
-    sys.modules["PIL.PngImagePlugin"] = pil_png_image_plugin_module
     sys.modules["comfy"] = comfy_module
-    sys.modules["comfy.cli_args"] = comfy_cli_args_module
 
 
 class SaveImageS3Tests(unittest.TestCase):
@@ -198,8 +184,7 @@ class SaveImageS3Tests(unittest.TestCase):
         self.assertEqual(result["ui"]["images"][0]["filename"], "flat-uuid-key")
         self.assertEqual(result["ui"]["images"][0]["subfolder"], "")
         self.assertEqual(self.saved_calls[0]["compress_level"], 4)
-        self.assertIn(("prompt", '{"workflow": "demo"}'), self.saved_calls[0]["pnginfo"].text)
-        self.assertIn(("seed", "123"), self.saved_calls[0]["pnginfo"].text)
+        self.assertIsNone(self.saved_calls[0]["pnginfo"])
 
     def test_save_images_overwrites_same_exact_key_for_batches(self):
         module = importlib.import_module("src.nodes.save_image_s3")

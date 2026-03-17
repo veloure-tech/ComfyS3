@@ -1,10 +1,7 @@
 import os
-import json
 import tempfile
 import numpy as np
 from PIL import Image
-from PIL.PngImagePlugin import PngInfo
-from comfy.cli_args import args
 
 from ..client_s3 import get_s3_instance
 S3_INSTANCE = get_s3_instance()
@@ -47,14 +44,6 @@ class SaveImageS3:
         for image in images:
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-            metadata = None
-            if not args.disable_metadata:
-                metadata = PngInfo()
-                if prompt is not None:
-                    metadata.add_text("prompt", json.dumps(prompt))
-                if extra_pnginfo is not None:
-                    for x in extra_pnginfo:
-                        metadata.add_text(x, json.dumps(extra_pnginfo[x]))
             
             temp_file_path = None
             try:
@@ -63,7 +52,7 @@ class SaveImageS3:
                     temp_file_path = temp_file.name
                     
                     # Save the image to the temporary file
-                    img.save(temp_file_path, pnginfo=metadata, compress_level=self.compress_level)
+                    img.save(temp_file_path, compress_level=self.compress_level)
 
                     # Upload the temporary file to S3
                     file_path = S3_INSTANCE.upload_file(
